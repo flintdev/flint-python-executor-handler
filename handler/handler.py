@@ -1,5 +1,5 @@
-from .flow_data import FlowData
-from .model import Model
+from flow_data import FlowData
+from model import Model
 
 
 class Handler:
@@ -7,3 +7,6 @@ class Handler:
         self.flow_data = FlowData()
         self.model = Model()
 
+
+if __name__ == "__main__":
+    print(Handler().flow_data.obj_name)
