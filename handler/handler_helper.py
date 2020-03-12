@@ -1,5 +1,5 @@
-from flow_data import FlowData
-from model import Model
+from handler.flow_data import FlowData
+from handler.model import Model
 
 
 class Handler:
