@@ -1,7 +1,6 @@
 from kubernetes import client, config
 import json
 from kubernetes.client.rest import ApiException
-from pprint import pprint
 
 GROUP = 'flint.flint.com'
 VERSION = 'v1'
@@ -17,33 +16,41 @@ class FlowData:
         self.obj_name = ""
 
     def get(self, path):
-        path = parse_path(path)
+        parsed_path = parse_path(path)
         try:
             obj = api.get_namespaced_custom_object(GROUP, VERSION, NAMESPACE, PLURAL, self.obj_name)
-            pprint(obj)
             flow_data = json.loads(obj["spec"]["flowData"])
-            if not path:
+            if not parsed_path:
                 return flow_data
-            return flow_data[path]
+            return flow_data[parsed_path]
         except ApiException as e:
-            print("Exception when calling CustomObjectsApi->get_namespaced_custom_object: %s\n" % e)
-            return None
+            status = e.status
+            reason = e.reason
+            reason = "Failed to get value of path {0} from flow data.\n Reason: ".format(path, reason)
+            raise FlowDataException(status=status, reason=reason)
+        except Exception as e:
+            reason = "Failed to get value of path {0} from flow data.\n Reason: ".format(path, e)
+            raise FlowDataException(status=0, reason=reason)
 
     def set(self, path, value):
-        obj = api.get_namespaced_custom_object(GROUP, VERSION, NAMESPACE, PLURAL, self.obj_name)
-        path = parse_path(path)
-        flow_data = json.loads(obj["spec"]["flowData"])
-        if not path:
-            obj["spec"]["flowData"] = json.dumps(value)
-        else:
-            flow_data[path] = value
-            obj["spec"]["flowData"] = json.dumps(flow_data)
         try:
-            obj = api.patch_namespaced_custom_object(GROUP, VERSION, NAMESPACE, PLURAL, self.obj_name, obj)
-            pprint(obj)
+            obj = api.get_namespaced_custom_object(GROUP, VERSION, NAMESPACE, PLURAL, self.obj_name)
+            parsed_path = parse_path(path)
+            flow_data = json.loads(obj["spec"]["flowData"])
+            if not parsed_path:
+                obj["spec"]["flowData"] = json.dumps(value)
+            else:
+                flow_data[parsed_path] = value
+                obj["spec"]["flowData"] = json.dumps(flow_data)
+            api_response = api.patch_namespaced_custom_object(GROUP, VERSION, NAMESPACE, PLURAL, self.obj_name, obj)
         except ApiException as e:
-            print("Exception when calling CustomObjectsApi->patch_namespaced_custom_object: %s\n" % e)
-            return None
+            status = e.status
+            reason = e.reason
+            reason = "Failed to set value {0} of path {1} from flow data.\n Reason: ".format(path, reason)
+            raise FlowDataException(status=status, reason=reason)
+        except Exception as e:
+            reason = "Failed to set value {0} of path {1} from flow data.\n Reason: ".format(path, e)
+            raise FlowDataException(status=0, reason=reason)
 
 
 def parse_path(path):
@@ -51,3 +58,14 @@ def parse_path(path):
     if path[0] == "$":
         path = path[1:]
     return ".".join(path)
+
+
+class FlowDataException(Exception):
+
+    def __init__(self, status=None, reason=None):
+        self.status = status
+        self.reason = reason
+
+    def __str__(self):
+        error_message = "Reason: {0}\n".format(self.reason)
+        return error_message
