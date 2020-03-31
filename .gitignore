@@ -2,3 +2,5 @@ venv/
 .cache/
 __pycache__/
 .idea/
+dist
+flint_python_executor_handler.egg-info
