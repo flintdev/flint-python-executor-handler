@@ -2,11 +2,6 @@ from kubernetes import client, config
 import json
 from kubernetes.client.rest import ApiException
 
-GROUP = 'flint.flint.com'
-VERSION = 'v1'
-NAMESPACE = 'default'
-PLURAL = 'workflows'
-
 config.load_kube_config()
 api = client.CustomObjectsApi()
 
@@ -14,11 +9,15 @@ api = client.CustomObjectsApi()
 class FlowData:
     def __init__(self):
         self.obj_name = ""
+        self.group = ""
+        self.version = ""
+        self.namespace = ""
+        self.plural = ""
 
     def get(self, path):
         parsed_path = parse_path(path)
         try:
-            obj = api.get_namespaced_custom_object(GROUP, VERSION, NAMESPACE, PLURAL, self.obj_name)
+            obj = api.get_namespaced_custom_object(self.group, self.version, self.namespace, self.plural, self.obj_name)
             flow_data = json.loads(obj["spec"]["flowData"])
             if not parsed_path:
                 return flow_data
@@ -34,7 +33,7 @@ class FlowData:
 
     def set(self, path, value):
         try:
-            obj = api.get_namespaced_custom_object(GROUP, VERSION, NAMESPACE, PLURAL, self.obj_name)
+            obj = api.get_namespaced_custom_object(self.group, self.version, self.namespace, self.plural, self.obj_name)
             parsed_path = parse_path(path)
             flow_data = json.loads(obj["spec"]["flowData"])
             if not parsed_path:
@@ -42,7 +41,7 @@ class FlowData:
             else:
                 flow_data[parsed_path] = value
                 obj["spec"]["flowData"] = json.dumps(flow_data)
-            api_response = api.patch_namespaced_custom_object(GROUP, VERSION, NAMESPACE, PLURAL, self.obj_name, obj)
+            api_response = api.patch_namespaced_custom_object(self.group, self.version, self.namespace, self.plural, self.obj_name, obj)
         except ApiException as e:
             status = e.status
             reason = e.reason
